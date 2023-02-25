@@ -1,1 +1,181 @@
-Hello 
+#include<iostream>
+#include <list>
+#include <cmath>
+#include <string>
+
+using namespace std;
+
+// Постоянный коэффициент для хэш-функции должен быть >0, но меньше 1
+const double A = 0.675;
+// Значение загруженности таблицы по достижение которого будет происходить ре-хеширование и увеличение размера таблицы
+const double DEFAULT_LOAD_FACTOR = 0.75;
+class Table {
+
+    // количество списков в таблице
+    int size;
+    //  сколько элементов находится в таблице
+    int capacity;
+    // список содержит данние таблицы и позволит реализовать метод цепочек для разрешения коллизий
+    list<string> *keys;
+public:
+    Table(int size) {
+        this->size = size;
+        this->keys = new list<string>[this->size];
+    }
+    // Хэш-функция умножения для параметра типа строки
+    unsigned hashFunction (string& key) {
+        unsigned index = 0;
+        for (int i = 0; i < key.size(); i++) {
+            index = index * 101 + key.at(i);
+        }
+        // Умножаем постоянный коэффициент на индекс,
+        // находим модуль от полученного результата,
+        // умножаем на размер таблицы
+        // округляем до целого значения, что и будет результатом хэш-функции
+        return floor(this->size * fmod(index,A));
+    };
+
+    // Функция вставки элемента в таблицу
+    void insert (string& key) {
+        int h = hashFunction(key);
+        list <string> :: iterator i;
+        for (i = keys[h].begin(); i != keys[h].end(); i++) {
+            if (*i == key)
+                break;
+        }
+        // Если ключ найден
+        if (i != keys[h].end()) {
+            cout << "\"" << key << "\"" << " - Данный элемент уже находится в таблице." << endl;
+        }
+        // Если не найден вставляем в таблицу в конце списка
+        else {
+            keys[h].push_back(key);
+            this->capacity++;
+            cout << "\"" << key << "\"" << " Успешно вставлен в таблицу." << endl;
+            // Находим значение загруженности таблицы
+            double currentLoadFactor = (1.0 * this->capacity) / this->size;
+            // Если значение загруженности таблицы на данный момент больше заданного значения, ре-хэшируем
+            if(currentLoadFactor > DEFAULT_LOAD_FACTOR) {
+                cout << "Загруженность таблицы " << currentLoadFactor * 100 << "%" << endl;
+                cout << "Будет проведено ре-хэширование" << endl;
+                rehash();
+            }
+        }
+    }
+
+    // Функция удаления элемента
+    void remove (string& key) {
+        int h = hashFunction(key);
+
+        // Ищем ключ в списке с идексом h
+        list <string> :: iterator i;
+        for (i = keys[h].begin(); i != keys[h].end(); i++) {
+            if (*i == key)
+                break;
+        }
+        // Если ключ найден, то удаляем его
+        if (i != keys[h].end()) {
+            keys[h].erase(i);
+            cout << "\"" << key << "\"" << " - Успешно удален." << endl;
+        }
+        else {
+            cout << "\"" << key << "\"" << " - Невозможно удалит, не найден в таблицею" << endl;
+        }
+    }
+    // Функция поиска ключа в таблице
+    void search (string& key) {
+        int h = hashFunction(key);
+
+        // Ищем ключ в списке с идексом h
+        list <string> :: iterator i;
+        for (i = keys[h].begin(); i != keys[h].end(); i++) {
+            if (*i == key)
+                break;
+        }
+        if (i != keys[h].end()) {
+            cout << "\"" << key << "\"" << " - Найден в таблице." << endl;
+        }
+        else {
+            cout << "\"" << key << "\"" << " - НЕ найден в таблице." << endl;
+        }
+    }
+    // Функция печатает таблицу, значения находящиеся в одном списке будут напечатаны с отступом по первым элементом
+    void print() {
+        for (int i = 0; i < this->size; i++) {
+            for (auto &element : keys[i])
+                cout << element << "\n\t";
+            cout << endl;
+        }
+    }
+
+    // Функция ре-хэширования и увеличения размера таблицы
+    void rehash() {
+        cout << "*** Начинаем ре-хэширование ***" << endl;
+        int oldSize = this->size;
+        int newSize = oldSize * 2;
+        // Создаем временный список и копируем все элементы и основного списка
+        list<string> *temp = this->keys;
+        this->size = newSize;
+        // Основной список инициализируем с удвоенным размером
+        this->keys = new list<string> [newSize];
+        this->capacity = 0;
+        // Вставляем элементы из временного в основной
+        for (int i = 0; i < oldSize; i++) {
+            for (auto &element : temp[i]) {
+                this->insert(element);
+            }
+        }
+        delete[] temp;
+        cout<< "Ре-хэширование успешно завершено!" << endl;
+    }
+};
+
+int main() {
+    // Таблица с размером 6
+    Table table(6);
+    string element;
+    int choice;
+    while(true) {
+        cout << "Выберите желаемую опцию:\n"
+                "1. Вставить элемент в таблицу\n"
+                "2. Найти элемент\n"
+                "3. Удалить элемент\n"
+                "4. Распечатать таблицу\n"
+                "5. Выход" << endl;
+        cout << "Ваш выбор: ";
+        cin >> choice;
+        cout << endl;
+        switch (choice) {
+            case 1:
+                cout << "Введите адрес компании (Страна, Город, Улица, Дом), который хотите вставить: " << endl;
+                // Читаем строку с пробелами
+                getline(cin >> ws, element);
+                cout << endl;
+                table.insert(element);
+                break;
+            case 2:
+                cout << "Введите адрес компании (Страна, Город, Улица, Дом) для поиска:" << endl;
+                getline(cin >> ws, element);
+                cout << endl;
+                table.search(element);
+                break;
+            case 3:
+                cout << "Введите адрес компании (Страна, Город, Улица, Дом), который хотите удалить:\t" << endl;
+                getline(cin >> ws, element);
+                cout << endl;
+                table.remove(element);
+                break;
+            case 4:
+                table.print();
+                break;
+            case 5:
+                exit(0);
+            default:
+                cout << "Выберите действительную опцию.\t" << endl;
+        }
+    }
+    return 0;
+}
+
+
+
